@@ -317,51 +317,7 @@ export class PriceClient {
           );
         }
       }
-      const results = await pipeline.exec();
-
-      if (results) {
-        // 检查每个命令的执行结果
-        const errors = results
-          .map((result, idx) => ({ result, idx }))
-          .filter(({ result }) => {
-            // Check if result is an array (error format) and has an error at index 0
-            return Array.isArray(result) && result.length > 0 && result[0] !== null;
-          });
-        
-        if (errors.length > 0) {
-          this.logger.error(`Pipeline execution had ${errors.length} errors out of ${results.length} commands`);
-          
-          // 打印前 20 个错误的详细信息
-          errors.slice(0, 20).forEach(({ result, idx }) => {
-            if (Array.isArray(result) && result.length >= 2) {
-              const [error, reply] = result;
-              this.logger.error({
-                commandIndex: idx,
-                errorMessage: error instanceof Error ? error.message : String(error),
-                errorName: error instanceof Error ? error.name : undefined,
-                reply: reply,
-              }, `Command ${idx} failed`);
-            }
-          });
-          
-          // 统计错误类型
-          const errorTypes = errors.reduce((acc, { result }) => {
-            if (Array.isArray(result) && result.length > 0) {
-              const error = result[0];
-              const errorMsg = (error && typeof error === 'object' && 'message' in error) 
-                ? String((error as any).message) 
-                : String(error);
-              acc[errorMsg] = (acc[errorMsg] || 0) + 1;
-            }
-            return acc;
-          }, {} as Record<string, number>);
-          
-          this.logger.error({ errorTypes }, 'Error type summary');
-          
-          throw new Error(`${errors.length} commands failed in pipeline`);
-        }
-      }
-
+      await pipeline.exec();
       await this.redisClient.set(
         PriceClient.PRICE_CACHE_INITIALIZED_KEY,
         "true",
